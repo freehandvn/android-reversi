@@ -35,6 +35,9 @@ public class ActivityGame extends Activity {
 	GameClient client;
 	GameServer server;
 
+	private String userName;
+	private long userID = System.currentTimeMillis();
+
 	private UpdateUITask uiUpdater = new UpdateUITask();
 
 	private IChatMessageHook clientChatMessageReceived = new IChatMessageHook() {
@@ -146,6 +149,16 @@ public class ActivityGame extends Activity {
 			client = new GameClient(port, address, clientChatMessageReceived, clientGameMessageReceived);
 			try {
 				client.connect();
+				// REMOVE BEFORE FLIGHT >
+				ChatMessage m = new ChatMessage(userName + "(" + (userID%10) + ")", "Hello World from Client!");
+				if (client != null) {
+					try {
+						client.sendMessage(m);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				// REMOVE BEFORE FLIGHT <
 			} catch (IOException e) {
 				e.printStackTrace();
 			} catch (Exception e) {
@@ -186,12 +199,13 @@ public class ActivityGame extends Activity {
 		}
 		etPort.setText("" + port);
 
-		Thread t = new Thread(new ServerThread(port));
-		t.start();
-
 		if (all_ok) {
+			Thread t = new Thread(new ServerThread(port));
+			t.start();
+
+			etServer.setText("localhost");
 			// TODO: connect as client aswell and then create game ui
-			createGameUI();
+			longToast("Now clieck connect as client");
 		} else {
 			longToast("Your input was not 100% correct. Guessing further settings. Click again to start with new values");
 		}
@@ -208,6 +222,8 @@ public class ActivityGame extends Activity {
 			}
 			name = etName.getText().toString();
 		}
+
+		userName = name;
 
 		int port = 0;
 		try {
@@ -234,18 +250,15 @@ public class ActivityGame extends Activity {
 			return;
 		}
 
-		clientConnect(server, port, name);
+		createGameUI();
+		clientConnect(server, port);
 
 	}
 
-	public void clientConnect(String server, int port, String name) {
-		client = new GameClient(port, server, clientChatMessageReceived, clientGameMessageReceived);
-
-		try {
-			client.connect();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	public void clientConnect(String server, int port) {
+		ClientThread x = new ClientThread(port, server);
+		Thread t = new Thread(x);
+		t.start();
 	}
 
 	private void createSetupUI() {
