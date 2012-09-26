@@ -2,6 +2,9 @@ package de.uvwxy.reversi;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 import android.app.Activity;
 import android.content.Context;
@@ -50,12 +53,15 @@ public class ActivityGame extends Activity {
 
 		@Override
 		public void run() {
-			String t = etChat.getText() + "\n" + msg.toString();
+			Date time = new Date(msg.getTimestamp());
+			Calendar d = new GregorianCalendar();
+			d.setTime(time);
+			String t = etChat.getText() + "\n[" + d.get(Calendar.HOUR) + ":" + d.get(Calendar.MINUTE) + "]:"
+					+ msg.getSender() + ": " + msg.getMessage();
 			// TODO: get text properly (modify object)!
 			etChat.setText(t);
 			etChat.setSelection(t.length(), t.length());
 		}
-
 	}
 
 	private IChatMessageHook clientChatMessageReceived = new IChatMessageHook() {
