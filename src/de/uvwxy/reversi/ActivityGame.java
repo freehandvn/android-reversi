@@ -1,12 +1,15 @@
 package de.uvwxy.reversi;
 
 import java.io.IOException;
+import java.net.ConnectException;
 
 import android.app.Activity;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.view.Menu;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -21,7 +24,7 @@ import de.uvwxy.packsock.game.GameServer;
 import de.uvwxy.packsock.game.IGameMessageHook;
 
 public class ActivityGame extends Activity {
-
+	Activity me = null;
 	// SETUP UI
 	private EditText etServer = null;
 	private EditText etPort = null;
@@ -38,14 +41,29 @@ public class ActivityGame extends Activity {
 	private String userName;
 	private long userID = System.currentTimeMillis();
 
-	private UpdateUITask uiUpdater = new UpdateUITask();
-
+	private class ChatPoster implements Runnable{
+		ChatMessage msg;
+		
+		public ChatPoster(ChatMessage msg){
+			this.msg = msg;
+		}
+		
+		@Override
+		public void run() {
+			String t = etChat.getText() + "\n" + msg.toString();
+			// TODO: get text properly (modify object)!
+			etChat.setText(t);
+			etChat.setSelection(t.length(), t.length());
+		}
+		
+	}
+	
 	private IChatMessageHook clientChatMessageReceived = new IChatMessageHook() {
 
 		@Override
 		public void onMessageReceived(ChatMessage msg) {
-			if (etChat != null) {
-				uiUpdater.execute(msg);
+			if (etChat != null && msg != null) {
+				me.runOnUiThread(new ChatPoster(msg));
 			}
 
 		}
@@ -72,7 +90,7 @@ public class ActivityGame extends Activity {
 
 	};
 
-	private class UpdateUITask extends AsyncTask<ChatMessage, ChatMessage, Integer> {
+	private class UpdateChatUITask extends AsyncTask<ChatMessage, ChatMessage, Integer> {
 
 		@Override
 		protected Integer doInBackground(ChatMessage... params) {
@@ -83,12 +101,25 @@ public class ActivityGame extends Activity {
 
 		protected void onProgressUpdate(ChatMessage... values) {
 			for (ChatMessage m : values) {
-				String t = etChat.getText() + "\n" + m.toString();
-				// TODO: get text properly (modify object)!
-				etChat.setText(t);
-				etChat.setSelection(t.length(), t.length());
+
 			}
 		};
+	}
+
+	private class SwitchUITaskSetup extends AsyncTask<Integer, Integer, Integer> {
+
+		protected void onProgressUpdate(Integer... values) {
+			Log.i("REV", "CREATE SETUP UI 2/2");
+			createSetupUI();
+		}
+
+		@Override
+		protected Integer doInBackground(Integer... params) {
+			// for (ChatMessage )
+			Log.i("REV", "CREATE SETUP UI 1/2");
+			publishProgress(params);
+			return null;
+		}
 	}
 
 	private OnClickListener buttonSend = new OnClickListener() {
@@ -99,7 +130,7 @@ public class ActivityGame extends Activity {
 				String msg = etInput.getText().toString();
 				etInput.setText("");
 
-				ChatMessage m = new ChatMessage("client0", msg);
+				ChatMessage m = new ChatMessage(userName, msg);
 				if (client != null) {
 					try {
 						client.sendMessage(m);
@@ -150,7 +181,7 @@ public class ActivityGame extends Activity {
 			try {
 				client.connect();
 				// REMOVE BEFORE FLIGHT >
-				ChatMessage m = new ChatMessage(userName + "(" + (userID%10) + ")", "Hello World from Client!");
+				ChatMessage m = new ChatMessage(userName + "(" + (userID % 10) + ")", "New Connection from Client!");
 				if (client != null) {
 					try {
 						client.sendMessage(m);
@@ -159,17 +190,40 @@ public class ActivityGame extends Activity {
 					}
 				}
 				// REMOVE BEFORE FLIGHT <
+			} catch (ConnectException e) {
+				Log.i("REV", "SWITCH TASK SETUP");
+				e.printStackTrace();
+				me.runOnUiThread(new Runnable() {
+
+					@Override
+					public void run() {
+						createSetupUI();
+					}
+
+				});
 			} catch (IOException e) {
+				Log.i("REV", "IO ERR");
 				e.printStackTrace();
 			} catch (Exception e) {
+				Log.i("REV", "ERR");
 				e.printStackTrace();
 			}
+
+			me.runOnUiThread(new Runnable() {
+
+				@Override
+				public void run() {
+					createGameUI();
+				}
+
+			});
 		}
 	}
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		me = this;
 		createSetupUI();
 
 	}
@@ -250,22 +304,17 @@ public class ActivityGame extends Activity {
 			return;
 		}
 
-		createGameUI();
-		clientConnect(server, port);
+		new Thread(new ClientThread(port, server)).start();
 
-	}
-
-	public void clientConnect(String server, int port) {
-		ClientThread x = new ClientThread(port, server);
-		Thread t = new Thread(x);
-		t.start();
 	}
 
 	private void createSetupUI() {
 		setContentView(R.layout.activity_setup);
 
 		etServer = (EditText) findViewById(R.id.etSever);
+		etServer.setText("192.168.178.27");
 		etPort = (EditText) findViewById(R.id.etPort);
+		etPort.setText("25667");
 		etName = (EditText) findViewById(R.id.etName);
 		cbSpectators = (CheckBox) findViewById(R.id.cbSpectators);
 
