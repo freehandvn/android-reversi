@@ -130,7 +130,7 @@ public class ActivityGame extends Activity {
 
 		@Override
 		public void onClick(View v) {
-			if (etInput != null) {
+			if (etInput != null && !etInput.getText().toString().equals("")) {
 				String msg = etInput.getText().toString();
 				etInput.setText("");
 
