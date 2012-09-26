@@ -4,7 +4,10 @@ import java.io.IOException;
 
 import de.uvwxy.packsock.chat.ChatMessage;
 import de.uvwxy.packsock.chat.IChatMessageHook;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.app.Activity;
 import android.content.DialogInterface;
 import android.view.Menu;
@@ -20,20 +23,38 @@ public class ActivityGame extends Activity {
 	GameClient client;
 	GameServer server;
 
+	private UpdateUITask uiUpdater = new UpdateUITask();
+	
 	private IChatMessageHook mh0 = new IChatMessageHook() {
 
 		@Override
 		public void onMessageReceived(ChatMessage msg) {
 			if (etChat != null) {
-				String t = etChat.getText() + "\n" + msg.toString();
-				// TODO: get text properly!
-				etChat.setText(t);
-				etChat.setSelection(t.length(), t.length());
+				uiUpdater.execute(msg);
 			}
 
 		}
 
 	};
+
+	private class UpdateUITask extends AsyncTask<ChatMessage, ChatMessage, Integer> {
+
+		@Override
+		protected Integer doInBackground(ChatMessage... params) {
+			// for (ChatMessage )
+			publishProgress(params);
+			return null;
+		}
+
+		protected void onProgressUpdate(ChatMessage... values) {
+			for (ChatMessage m : values) {
+				String t = etChat.getText() + "\n" + m.toString();
+				// TODO: get text properly (modify object)!
+				etChat.setText(t);
+				etChat.setSelection(t.length(), t.length());
+			}
+		};
+	}
 
 	private OnClickListener buttonSend = new OnClickListener() {
 
@@ -60,7 +81,6 @@ public class ActivityGame extends Activity {
 
 		@Override
 		public void run() {
-
 			server = new GameServer(25567, 0, "Reversi Server");
 			try {
 				server.start();
@@ -73,13 +93,6 @@ public class ActivityGame extends Activity {
 			try {
 				client.connect();
 			} catch (Exception e) {
-				e.printStackTrace();
-			}
-
-			ChatMessage m = new ChatMessage("Client0", "Hello World");
-			try {
-				client.sendMessage(m);
-			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
