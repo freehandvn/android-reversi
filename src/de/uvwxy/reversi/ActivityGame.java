@@ -41,13 +41,13 @@ public class ActivityGame extends Activity {
 	private String userName;
 	private long userID = System.currentTimeMillis();
 
-	private class ChatPoster implements Runnable{
+	private class ChatPoster implements Runnable {
 		ChatMessage msg;
-		
-		public ChatPoster(ChatMessage msg){
+
+		public ChatPoster(ChatMessage msg) {
 			this.msg = msg;
 		}
-		
+
 		@Override
 		public void run() {
 			String t = etChat.getText() + "\n" + msg.toString();
@@ -55,9 +55,9 @@ public class ActivityGame extends Activity {
 			etChat.setText(t);
 			etChat.setSelection(t.length(), t.length());
 		}
-		
+
 	}
-	
+
 	private IChatMessageHook clientChatMessageReceived = new IChatMessageHook() {
 
 		@Override
@@ -74,8 +74,7 @@ public class ActivityGame extends Activity {
 
 		@Override
 		public void onMessageReceived(GameMessage msg) {
-			// TODO Auto-generated method stub
-
+			Log.i("REV", "Received Game Message on the client side");
 		}
 
 	};
@@ -84,8 +83,7 @@ public class ActivityGame extends Activity {
 
 		@Override
 		public void onMessageReceived(GameMessage msg) {
-			// TODO Auto-generated method stub
-
+			Log.i("REV", "Received Game Message on the server side");
 		}
 
 	};
