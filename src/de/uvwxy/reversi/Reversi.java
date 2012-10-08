@@ -191,6 +191,7 @@ public class Reversi {
 		for (int i = 0; i < 8; i++) {
 			setPlayerPoints((i + 1), ppoints[i]);
 			Log.i("REV", "Setting (" + (i + 1) + ") " + ppoints[i]);
+			Log.i("REV", "Set (" + (i + 1) + ") " + getPlayerPoints(i+1));
 		}
 	}
 
