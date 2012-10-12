@@ -262,84 +262,34 @@ public class Reversi {
 		// 7 3
 		// 654
 		// Log.i("REV", "Testing 0");
-		if (testDiagonal(x, y, true, true, player))
+		if (testMove(x, y, -1, -1, player))
 			return true;
 		// Log.i("REV", "Testing 1");
-		if (testHorizontal(x, y, true, player))
+		if (testMove(x, y, 0, -1, player))
 			return true;
 		// Log.i("REV", "Testing 2");
-		if (testDiagonal(x, y, false, true, player))
+		if (testMove(x, y, 1, -1, player))
 			return true;
 		// Log.i("REV", "Testing 3");
-		if (testVertical(x, y, false, player))
+		if (testMove(x, y, 1, 0, player))
 			return true;
 		// Log.i("REV", "Testing 4");
-		if (testDiagonal(x, y, false, false, player))
+		if (testMove(x, y, 1, 1, player))
 			return true;
 		// Log.i("REV", "Testing 5");
-		if (testHorizontal(x, y, false, player))
+		if (testMove(x, y, 0, 1, player))
 			return true;
 		// Log.i("REV", "Testing 6");
-		if (testDiagonal(x, y, true, false, player))
+		if (testMove(x, y, -1, 1, player))
 			return true;
 		// Log.i("REV", "Testing 7");
-		if (testVertical(x, y, true, player))
+		if (testMove(x, y, -1, 0, player))
 			return true;
 
 		return false;
 	}
-
-	private boolean testVertical(int x, int y, boolean left, int player) {
-		// non empty fields are not valid to place a stone
-		if (get(x, y) != iEmpty)
-			return false;
-
-		boolean foundOtherStone = false;
-		int xi = x;
-
-		while ((left && xi >= 0) || (!left && xi <= vBoardWidth)) {
-			xi = left ? --xi : ++xi;
-			byte vi = get(xi, y);
-
-			// fail if found empty
-			if (vi == iEmpty)
-				return false;
-			// return true if finally player stone and found other stone before
-			if (vi == player)
-				return true && foundOtherStone;
-			if (vi != player && vi <= iPlayer7 && vi >= iPlayer0)
-				foundOtherStone = true;
-		}
-
-		return false;
-	}
-
-	private boolean testHorizontal(int x, int y, boolean up, int player) {
-		// non empty fields are not valid to place a stone
-		if (get(x, y) != iEmpty)
-			return false;
-
-		boolean foundOtherStone = false;
-		int yi = y;
-
-		while (((up && yi >= 0) || (!up && yi <= vBoardHeight))) {
-			yi = up ? --yi : ++yi;
-			byte vi = get(x, yi);
-
-			// fail if found empty
-			if (vi == iEmpty)
-				return false;
-			// return true if finally player stone and found other stone before
-			if (vi == player)
-				return true && foundOtherStone;
-			if (vi != player && vi <= iPlayer7 && vi >= iPlayer0)
-				foundOtherStone = true;
-		}
-
-		return false;
-	}
-
-	private boolean testDiagonal(int x, int y, boolean left, boolean up, int player) {
+	
+	private boolean testMove(int x, int y, int left, int up, int player) {
 		// non empty fields are not valid to place a stone
 		if (get(x, y) != iEmpty)
 			return false;
@@ -348,9 +298,9 @@ public class Reversi {
 		int xi = x;
 		int yi = y;
 
-		while (((up && yi >= 0) || (!up && yi <= vBoardHeight)) && ((left && xi >= 0) || (!left && xi <= vBoardWidth))) {
-			yi = up ? --yi : ++yi;
-			xi = left ? --xi : ++xi;
+		while (xi < vBoardWidth && xi >= 0 && yi < vBoardHeight && y >= 0) {
+			yi += left;
+			xi += up;
 			byte vi = get(xi, yi);
 
 			// fail if found empty
@@ -366,7 +316,17 @@ public class Reversi {
 		return false;
 	}
 
-	public void doMove(int x, int y, int player) {
-		// TODO!
+	public void doMove(int xm, int ym, int player) {
+		boolean[][] flipMatrix = new boolean[vBoardWidth][bBoardHeight];
+		if (testDiagonal(xm,ym,true,true,player)){
+			
+		}
+		
+		for (int x = 0; x < vBoardWidth; x++) {
+			for (int y = 0; y < vBoardHeight; y++) {
+				if (flipMatrix[x][y])
+					set(x, y, (byte) player);
+			}
+		}
 	}
 }
