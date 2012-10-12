@@ -133,6 +133,13 @@ public class Reversi {
 
 	}
 
+	/**
+	 * 
+	 * @param player
+	 *            [1..8]
+	 * @param points
+	 *            [15bits]
+	 */
 	public void setPlayerPoints(int player, int points) {
 		ByteBuffer b = ByteBuffer.allocate(4);
 		b.putInt(points);
@@ -142,18 +149,24 @@ public class Reversi {
 		byte left = b.get(2);
 		byte right = b.get(3);
 
-		boardData[bScore0 + player - 1] = left;
-		boardData[bScore0 + player] = right;
+		boardData[bScore0 + (2 * player) - 2] = left;
+		boardData[bScore0 + (2 * player) - 1] = right;
 
 	}
 
+	/**
+	 * 
+	 * @param player
+	 *            [1..8]
+	 * @return [15bits]
+	 */
 	public int getPlayerPoints(int player) {
 		ByteBuffer b = ByteBuffer.allocate(4);
 		b.put((byte) 0);
 		b.put((byte) 0);
 		// player is 1..8 -> add 0 for bScore0, etc.
-		b.put(boardData[bScore0 + player - 1]);
-		b.put(boardData[bScore0 + player]);
+		b.put(boardData[bScore0 + (2 * player) - 2]);
+		b.put(boardData[bScore0 + (2 * player) - 1]);
 		b.position(0);
 		return b.getInt();
 	}
@@ -175,7 +188,6 @@ public class Reversi {
 		String buf = "";
 		for (int i = bBoardBegin; i <= bBoardEnd; i++) {
 			if ((i - bBoardBegin) % getWidth() == 0) {
-				Log.i("REV", buf);
 				buf = "";
 			}
 			buf += boardData[i];
@@ -183,15 +195,12 @@ public class Reversi {
 
 		for (int i = bBoardBegin; i <= bBoardEnd; i++) {
 			if (boardData[i] >= 1 && boardData[i] <= 8) {
-				Log.i("REV", "Found: " + boardData[i]);
 				ppoints[boardData[i] - 1]++;
 			}
 		}
 
 		for (int i = 0; i < 8; i++) {
 			setPlayerPoints((i + 1), ppoints[i]);
-			Log.i("REV", "Setting (" + (i + 1) + ") " + ppoints[i]);
-			Log.i("REV", "Set (" + (i + 1) + ") " + getPlayerPoints(i+1));
 		}
 	}
 
