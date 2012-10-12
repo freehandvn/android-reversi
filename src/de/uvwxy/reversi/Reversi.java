@@ -288,7 +288,7 @@ public class Reversi {
 
 		return false;
 	}
-	
+
 	private boolean testMove(int x, int y, int left, int up, int player) {
 		// non empty fields are not valid to place a stone
 		if (get(x, y) != iEmpty)
@@ -317,16 +317,52 @@ public class Reversi {
 	}
 
 	public void doMove(int xm, int ym, int player) {
-		boolean[][] flipMatrix = new boolean[vBoardWidth][bBoardHeight];
-		if (testDiagonal(xm,ym,true,true,player)){
-			
-		}
-		
+		boolean[][] flipMatrix = new boolean[vBoardWidth][vBoardHeight];
+
+		checkAndFillMatrix(xm, ym, -1, -1, player, flipMatrix);
+		checkAndFillMatrix(xm, ym, 0, -1, player, flipMatrix);
+		checkAndFillMatrix(xm, ym, 1, -1, player, flipMatrix);
+
+		checkAndFillMatrix(xm, ym, 1, 0, player, flipMatrix);
+
+		checkAndFillMatrix(xm, ym, 1, 1, player, flipMatrix);
+		checkAndFillMatrix(xm, ym, 0, 1, player, flipMatrix);
+		checkAndFillMatrix(xm, ym, -1, 1, player, flipMatrix);
+
+		checkAndFillMatrix(xm, ym, -1, 0, player, flipMatrix);
+
 		for (int x = 0; x < vBoardWidth; x++) {
 			for (int y = 0; y < vBoardHeight; y++) {
 				if (flipMatrix[x][y])
 					set(x, y, (byte) player);
 			}
 		}
+	}
+
+	private int checkAndFillMatrix(int xm, int ym, int left, int up, int player, boolean[][] flipMatrix) {
+		if (testMove(xm, ym, left, up, player))
+			return collectMove(xm, ym, left, up, player, flipMatrix);
+		return 0;
+	}
+
+	private int collectMove(int x, int y, int left, int up, int player, boolean[][] flipMatrix) {
+		// non empty fields are not valid to place a stone
+		int xi = x;
+		int yi = y;
+		int sum = 0;
+		flipMatrix[xi][yi] = true;
+		yi += left;
+		xi += up;
+		while (xi < vBoardWidth && xi >= 0 && yi < vBoardHeight && y >= 0) {
+			// halt at first own stone
+			if (get(xi, yi) == player)
+				break;
+			flipMatrix[xi][yi] = true;
+			sum++;
+			yi += left;
+			xi += up;
+		}
+
+		return sum;
 	}
 }
