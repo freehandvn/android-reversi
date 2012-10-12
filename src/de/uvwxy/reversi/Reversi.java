@@ -15,7 +15,7 @@ public class Reversi {
 	private int bBoardHeight = 1; // +128 to remove sign
 	private int bBoardBegin = bBoardHeight + 1;
 	private int bBoardEnd = bBoardBegin + (vBoardWidth * vBoardHeight);
-	private int bNumPlayingPlayers = bBoardEnd + 1;
+	private int bNumPlayingPlayers = bBoardEnd;
 
 	// all 8*2bytes are present all the time!
 	// two bytes for score each (-> (127+128)*(127+128) = 65025 = 0b1111 11110 0000 0001
@@ -57,6 +57,10 @@ public class Reversi {
 
 	public Reversi() {
 		newStandard2PBoard();
+	}
+	
+	public Reversi(int w, int h){
+		newStandard2PBoard(w, h);
 	}
 
 	public Reversi(byte[] boardData) {
@@ -126,10 +130,10 @@ public class Reversi {
 		// 3/3 3/4 -> 1 2
 		// 4/3 4/4 -> 2 1
 
-		boardData[(vBoardWidth * (y - 1)) + (x - 1)] = playerA;
-		boardData[(vBoardWidth * (y - 1)) + x] = playerB;
-		boardData[(vBoardWidth * y) + (x - 1)] = playerB;
-		boardData[(vBoardWidth * y) + (x)] = playerA;
+		boardData[bBoardBegin + (vBoardWidth * (y - 1)) + (x - 1)] = playerA;
+		boardData[bBoardBegin + (vBoardWidth * (y - 1)) + x] = playerB;
+		boardData[bBoardBegin + (vBoardWidth * y) + (x - 1)] = playerB;
+		boardData[bBoardBegin + (vBoardWidth * y) + (x)] = playerA;
 
 	}
 
@@ -185,14 +189,6 @@ public class Reversi {
 	public void recalculateAllPlayerPoints() {
 		int[] ppoints = new int[8];
 
-		String buf = "";
-		for (int i = bBoardBegin; i <= bBoardEnd; i++) {
-			if ((i - bBoardBegin) % getWidth() == 0) {
-				buf = "";
-			}
-			buf += boardData[i];
-		}
-
 		for (int i = bBoardBegin; i <= bBoardEnd; i++) {
 			if (boardData[i] >= 1 && boardData[i] <= 8) {
 				ppoints[boardData[i] - 1]++;
@@ -239,5 +235,34 @@ public class Reversi {
 
 		setStartBlock(bW2, bH2, iPlayer0, iPlayer1);
 
+	}
+
+	public byte get(int x, int y) {
+		return boardData[bBoardBegin + (x) + (y * vBoardWidth)];
+	}
+
+	public void set(int x, int y, byte b) {
+		boardData[bBoardBegin + (x) + (y * vBoardWidth)] = b;
+	}
+
+	public void printBoard() {
+		String buf = "";
+		for (int i = bBoardBegin; i < bBoardEnd; i++) {
+			if ((i - bBoardBegin) % getWidth() == 0) {
+				buf += "\n";
+			}
+			buf += "" + boardData[i];
+		}
+		Log.i("REV", "Board:\n" + buf);
+	}
+	
+	
+	public boolean moveIsPossible(int x, int y, int player){
+		
+		return false;
+	}
+	
+	public void doMove(int x, int y, int player){
+		// TODO!
 	}
 }
