@@ -256,11 +256,12 @@ public class Reversi {
 		Log.i("REV", "Board:\n" + buf);
 	}
 
-	public boolean moveIsPossible(int x, int y, int player) {
+	public boolean moveIsPossible(int x, int y, byte player) {
 		// check four directions
 		// 012
 		// 7 3
 		// 654
+		// Log.i("REV", "Checking: " + x + "/" + y);
 		// Log.i("REV", "Testing 0");
 		if (testMove(x, y, -1, -1, player))
 			return true;
@@ -289,7 +290,23 @@ public class Reversi {
 		return false;
 	}
 
-	private boolean testMove(int x, int y, int left, int up, int player) {
+	/**
+	 * Returns true if the player has a move on this board.
+	 * 
+	 * @param player
+	 * @return
+	 */
+	public boolean playerHasMove(byte player) {
+		for (int x = 0; x < vBoardWidth; x++) {
+			for (int y = 0; y < vBoardHeight; y++) {
+				if (moveIsPossible(x, y, player))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean testMove(int x, int y, int left, int up, byte player) {
 		// non empty fields are not valid to place a stone
 		if (get(x, y) != iEmpty)
 			return false;
@@ -297,10 +314,10 @@ public class Reversi {
 		boolean foundOtherStone = false;
 		int xi = x;
 		int yi = y;
-
-		while (xi < vBoardWidth && xi >= 0 && yi < vBoardHeight && y >= 0) {
-			yi += left;
-			xi += up;
+		yi += left;
+		xi += up;
+		// >= 0 otherwise border is never checked
+		while (xi < vBoardWidth && xi >= 0 && yi < vBoardHeight && yi >= 0) {
 			byte vi = get(xi, yi);
 
 			// fail if found empty
@@ -311,12 +328,14 @@ public class Reversi {
 				return true && foundOtherStone;
 			if (vi != player && vi <= iPlayer7 && vi >= iPlayer0)
 				foundOtherStone = true;
+			yi += left;
+			xi += up;
 		}
 
 		return false;
 	}
 
-	public void doMove(int xm, int ym, int player) {
+	public void doMove(int xm, int ym, byte player) {
 		boolean[][] flipMatrix = new boolean[vBoardWidth][vBoardHeight];
 
 		checkAndFillMatrix(xm, ym, -1, -1, player, flipMatrix);
@@ -337,15 +356,17 @@ public class Reversi {
 					set(x, y, (byte) player);
 			}
 		}
+
+		recalculateAllPlayerPoints();
 	}
 
-	private int checkAndFillMatrix(int xm, int ym, int left, int up, int player, boolean[][] flipMatrix) {
+	private int checkAndFillMatrix(int xm, int ym, int left, int up, byte player, boolean[][] flipMatrix) {
 		if (testMove(xm, ym, left, up, player))
 			return collectMove(xm, ym, left, up, player, flipMatrix);
 		return 0;
 	}
 
-	private int collectMove(int x, int y, int left, int up, int player, boolean[][] flipMatrix) {
+	private int collectMove(int x, int y, int left, int up, byte player, boolean[][] flipMatrix) {
 		// non empty fields are not valid to place a stone
 		int xi = x;
 		int yi = y;
