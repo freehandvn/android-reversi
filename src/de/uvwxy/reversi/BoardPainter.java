@@ -1,13 +1,10 @@
 package de.uvwxy.reversi;
 
-import java.io.File;
-import java.io.IOException;
-
 import android.content.Context;
-import android.content.res.AssetFileDescriptor;
 import android.content.res.Resources.NotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.BitmapFactory.Options;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -64,6 +61,11 @@ public class BoardPainter extends PaintBox {
 		return Bitmap.createBitmap(b, 0, 0, width, height, matrix, true);
 	}
 
+	Rect rctBGdst = null, rctBGsrc = null;
+
+	Rect[][] src = new Rect[8][8];
+	Rect[][] dst = new Rect[8][8];
+
 	@Override
 	protected void onDraw(Canvas canvas) {
 		if (canvas == null)
@@ -75,20 +77,40 @@ public class BoardPainter extends PaintBox {
 			int w = widerThanHigh ? getHeight() : getWidth();
 			if (widerThanHigh) {
 				offsetx = (getWidth() - w) / 2;
-				rectScale = ((double) w) / ((double) getHeight());
 			} else {
 				offsety = (getHeight() - w) / 2;
-				rectScale = ((double) w) / ((double) getWidth());
 			}
 
-			empty = getScaledBitmap(BitmapFactory.decodeResource(context.getResources(), R.drawable.empty), w, w);
-			red = getScaledBitmap(BitmapFactory.decodeResource(context.getResources(), R.drawable.red), w, w);
-			blue = getScaledBitmap(BitmapFactory.decodeResource(context.getResources(), R.drawable.blue), w, w);
+			Options o = new BitmapFactory.Options();
+			o.inScaled = false;
+
+			Bitmap bEmpty = BitmapFactory.decodeResource(context.getResources(), R.drawable.empty, o);
+			Bitmap bBlue = BitmapFactory.decodeResource(context.getResources(), R.drawable.blue, o);
+			Bitmap bRed = BitmapFactory.decodeResource(context.getResources(), R.drawable.red, o);
+			Bitmap bMask = BitmapFactory.decodeResource(context.getResources(), R.drawable.mask, o);
+
+			empty = getScaledBitmap(bEmpty, w, w);
+			red = getScaledBitmap(bRed, w, w);
+			blue = getScaledBitmap(bBlue, w, w);
+
+			rctBGsrc = new Rect(0, 0, w, w);
+			rctBGdst = new Rect(offsetx, offsety, offsetx + w, offsety + w);
+
+			Log.i("REV", "Empty dim: " + bEmpty.getWidth() + "/" + bEmpty.getHeight());
+			Log.i("REV", "Red dim: " + bRed.getWidth() + "/" + bRed.getHeight());
+			Log.i("REV", "Blue dim: " + bBlue.getWidth() + "/" + bBlue.getHeight());
+
+			Log.i("REV", "x Empty dim: " + empty.getWidth() + "/" + empty.getHeight());
+			Log.i("REV", "x Red dim: " + red.getWidth() + "/" + red.getHeight());
+			Log.i("REV", "x Blue dim: " + blue.getWidth() + "/" + blue.getHeight());
+
+			rectScale = ((double) w) / ((double) bEmpty.getHeight());
+			Log.i("REV", "rectScale = " + ((double) w) + " / " + ((double) bEmpty.getHeight()));
 
 			int[][][] clickMask = null;
 
 			try {
-				clickMask = ClickMapFactory.createClickMapOnAndroid(context, R.drawable.mask);
+				clickMask = ClickMapFactory.createClickMapOnAndroid(bMask);
 			} catch (NotFoundException e) {
 				e.printStackTrace();
 			}
@@ -99,15 +121,24 @@ public class BoardPainter extends PaintBox {
 					for (int y = 0; y < 8; y++) {
 						// TODO: something fancy
 						rectLookUpTable[x][y] = clickMask[x * 10][y * 10];
+
 						Log.i("REV", "" + x + "/" + y + " " + rectLookUpTable[x][y][0] + " " + rectLookUpTable[x][y][1]
 								+ " " + rectLookUpTable[x][y][2] + " " + rectLookUpTable[x][y][3]);
+						src[x][y] = new Rect((int) (rectLookUpTable[x][y][0] * rectScale),
+								(int) (rectLookUpTable[x][y][1] * rectScale),
+								(int) (rectLookUpTable[x][y][2] * rectScale),
+								(int) (rectLookUpTable[x][y][3] * rectScale));
+						dst[x][y] = new Rect((int) (rectLookUpTable[x][y][0] * rectScale) + offsetx,
+								(int) (rectLookUpTable[x][y][1] * rectScale) + offsety,
+								(int) (rectLookUpTable[x][y][2] * rectScale) + offsetx,
+								(int) (rectLookUpTable[x][y][3] * rectScale) + offsety);
 					}
 				}
 			} else {
 				Log.i("REV", "clickMask was null");
 			}
 
-			Log.i("REV", "scale " + rectScale);
+			Log.i("REV", "rectScale " + rectScale);
 
 		}
 
@@ -118,13 +149,18 @@ public class BoardPainter extends PaintBox {
 
 		canvas.drawRect(0, 0, getWidth(), getHeight(), p);
 
-		canvas.drawBitmap(empty, offsetx, offsety, p);
-		int x = 3, y = 4;
-		Rect src = new Rect(rectLookUpTable[x][y][0], rectLookUpTable[x][y][1], rectLookUpTable[x][y][2],
-				rectLookUpTable[x][y][3]);
-		Rect dst = new Rect((int) (rectLookUpTable[x][y][0] * rectScale), (int) (rectLookUpTable[x][y][1] * rectScale),
-				(int) (rectLookUpTable[x][y][2] * rectScale), (int) (rectLookUpTable[x][y][3] * rectScale));
-		canvas.drawBitmap(blue, src, dst, p);
+		canvas.drawBitmap(empty, rctBGsrc, rctBGdst, p);
+
+		// for (int x = 0; x < 8; x++) {
+		// for (int y = 0; y < 8; y++) {
+		//
+		// }
+		// }
+
+		canvas.drawBitmap(blue, src[3][3], dst[3][3], p);
+		canvas.drawBitmap(blue, src[4][4], dst[4][4], p);
+		canvas.drawBitmap(red, src[3][4], dst[3][4], p);
+		canvas.drawBitmap(red, src[4][3], dst[4][3], p);
 
 		p.setColor(Color.BLACK);
 		canvas.drawText("width: " + getWidth() + " height: " + getHeight(), getWidth() / 2 - 50, getHeight() / 2 - 10,
