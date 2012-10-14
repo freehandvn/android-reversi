@@ -36,6 +36,7 @@ public class ActivityGame extends Activity {
 	private Button btnSend = null;
 	private EditText etChat = null;
 	private EditText etInput = null;
+	
 	GameClient client;
 	GameServer server;
 

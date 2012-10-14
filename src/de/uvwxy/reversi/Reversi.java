@@ -5,6 +5,19 @@ import java.nio.ByteBuffer;
 import android.util.Log;
 
 public class Reversi {
+
+	// byte IDs for board data
+	public static final byte iEmpty = 0;
+	public static final byte iPlayer0 = 1;
+	public static final byte iPlayer1 = 2;
+	public static final byte iPlayer2 = 3;
+	public static final byte iPlayer3 = 4;
+	public static final byte iPlayer4 = 5;
+	public static final byte iPlayer5 = 6;
+	public static final byte iPlayer6 = 7;
+	public static final byte iPlayer7 = 8;
+	public static final byte iNone = 9;
+
 	// vars to keep board dimensions:
 	private int vBoardWidth = 8;
 	private int vBoardHeight = 8;
@@ -28,18 +41,6 @@ public class Reversi {
 	private int bScore6 = bScore5 + 2;
 	private int bScore7 = bScore6 + 2;
 	private int bPlayerMove = bScore7 + 1;
-
-	// byte IDs for board data
-	private final byte iEmpty = 0;
-	private final byte iPlayer0 = 1;
-	private final byte iPlayer1 = 2;
-	private final byte iPlayer2 = 3;
-	private final byte iPlayer3 = 4;
-	private final byte iPlayer4 = 5;
-	private final byte iPlayer5 = 6;
-	private final byte iPlayer6 = 7;
-	private final byte iPlayer7 = 8;
-	private final byte iNone = 9;
 
 	/**
 	 * Initially: Board size: [boardWidth,boardHeight,...]
