@@ -34,6 +34,7 @@ public class BoardPainter extends PaintBox {
 	double rectScale = 0;
 
 	Reversi rev = null;
+	SendGameReply sgr = null;
 
 	public BoardPainter(Context context) {
 		super(context);
@@ -250,6 +251,15 @@ public class BoardPainter extends PaintBox {
 	boolean[] fingerDown = new boolean[10];
 	boolean[] fingerUsed = new boolean[10];
 
+	public void setReversiGame(Reversi r, boolean myTurn) {
+		rev = r;
+		this.myTurn = myTurn;
+	}
+
+	public void setSendGameReply(SendGameReply sgr) {
+		this.sgr = sgr;
+	}
+
 	private void setFingersDown(int f) {
 		Log.i("REMIND", "Fingers down: " + f);
 		for (int i = 0; i < f; i++) {
@@ -281,22 +291,26 @@ public class BoardPainter extends PaintBox {
 		}
 	}
 
-	private byte nextPlayer = Reversi.iPlayer0;
+	private boolean myTurn = false;
 
 	private void actionOnStone(int x, int y) {
 		Log.i("REV", "Game: " + x + "/" + y);
 
-		if (rev.playerHasMove(nextPlayer)) {
+		if (myTurn && rev.playerHasMove(sgr.getID())) {
 			if (rev.get(x, y) == rev.iEmpty) {
-				Log.i("REV", "Game: " + x + "/" + y + " is empty!");
-				if (rev.moveIsPossible(x, y, rev.iPlayer0))
-					rev.doMove(x, y, rev.iPlayer0);
+				if (rev.moveIsPossible(x, y, sgr.getID())) {
+					Log.i("REV", "Game: " + x + "/" + y + " is possible!");
+					rev.doMove(x, y, sgr.getID());
+					Log.i("REV", "Client says board ID is " + rev.getPlayerWhichHasToMove());
+					myTurn = false;
+					sgr.sendGameReply(rev);
+				} else {
+					Log.i("REV", "Game: " + x + "/" + y + " move not possible");
+				}
 			}
 
+		} else {
+			Log.i("REV", "not your turn!");
 		}
-		if (nextPlayer == Reversi.iPlayer0)
-			nextPlayer = Reversi.iPlayer1;
-		else
-			nextPlayer = Reversi.iPlayer0;
 	}
 }

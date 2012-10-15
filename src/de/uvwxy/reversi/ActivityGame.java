@@ -2,6 +2,7 @@ package de.uvwxy.reversi;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.SocketException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -9,7 +10,6 @@ import java.util.LinkedList;
 
 import android.app.Activity;
 import android.content.Context;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -19,6 +19,8 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
 import de.uvwxy.packsock.PackSock;
+import de.uvwxy.packsock.Packet;
+import de.uvwxy.packsock.PacketType;
 import de.uvwxy.packsock.chat.ChatMessage;
 import de.uvwxy.packsock.chat.IChatMessageHook;
 import de.uvwxy.packsock.game.GameClient;
@@ -26,13 +28,13 @@ import de.uvwxy.packsock.game.GameMessage;
 import de.uvwxy.packsock.game.GameServer;
 import de.uvwxy.packsock.game.IGameMessageHook;
 
-public class ActivityGame extends Activity {
+public class ActivityGame extends Activity implements SendGameReply {
 	Activity me = null;
 	// SETUP UI
 	private EditText etServer = null;
 	private EditText etPort = null;
 	private EditText etName = null;
-	private CheckBox cbSpectators = null;
+	// private CheckBox cbSpectators = null;
 
 	// GAME UI
 	private Button btnSend = null;
@@ -43,12 +45,17 @@ public class ActivityGame extends Activity {
 	GameServer server;
 
 	private byte myPlayerID;
+	private Reversi currentGame = null;
 	private final static byte CONTAINS_BOARD_DATA = 1;
 	private final static byte CONTAINS_PLAYER_ID_REQUEST = 2;
-	private final static byte CONTAINS_PLAYER_ID = 2;
+	private final static byte CONTAINS_PLAYER_ID = 3;
+	private final static byte RESET_ID = 4;
+	protected static final String SERVER_STRING = "Server";
 
 	private String userName;
 	private long userID = System.currentTimeMillis();
+
+	private BoardPainter boardPainter = null;
 
 	private class ChatPoster implements Runnable {
 		ChatMessage msg;
@@ -87,14 +94,54 @@ public class ActivityGame extends Activity {
 		@Override
 		public void onMessageReceived(GameMessage msg, PackSock s) {
 			Log.i("REV", "Received Game Message on the client side");
-			if (msg.getId() == CONTAINS_BOARD_DATA) {
-				
+
+			switch (msg.getId()) {
+			case CONTAINS_PLAYER_ID:
+				Log.i("REV", "Client received PLAYER ID");
+				myPlayerID = msg.getGameObjData()[0];
+				me.runOnUiThread(new ChatPoster(new ChatMessage("Server", "You are player " + myPlayerID)));
+				break;
+			case CONTAINS_BOARD_DATA:
+				Log.i("REV", "Client received BOARD DATA");
+				currentGame = new Reversi(msg.getGameObjData());
+				if (currentGame.getPlayerWhichHasToMove() == myPlayerID) {
+					me.runOnUiThread(new ChatPoster(new ChatMessage("Server", "It's your move!")));
+				}
+				Log.i("REV", "game id in board: " + currentGame.getPlayerWhichHasToMove());
+				boardPainter.setReversiGame(currentGame, myPlayerID == currentGame.getPlayerWhichHasToMove());
+				break;
+			case RESET_ID:
+				Log.i("REV", "Client received RESET ID");
+				me.runOnUiThread(new ChatPoster(new ChatMessage("local", ".. have to rejoin again")));
+				myPlayerID = 0;
+			default:
 			}
+
 		}
 
 	};
 
+	@Override
+	public void sendGameReply(Reversi r) {
+		GameMessage m = new GameMessage(CONTAINS_BOARD_DATA, r.getObjectData());
+		try {
+			Log.i("REV", "Client sending game to server!");
+			client.sendGameMessage(m);
+		} catch (SocketException e) {
+			me.runOnUiThread(new ChatPoster(new ChatMessage("local", "sending move failed")));
+		} catch (IOException e) {
+			// TODO:
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	public byte getID() {
+		return myPlayerID;
+	}
+
 	LinkedList<PackSock> clientSockets = new LinkedList<PackSock>();
+	private Object sentIDLOCK = new Object();
 	private IGameMessageHook serverGameMessageReceived = new IGameMessageHook() {
 
 		@Override
@@ -102,42 +149,63 @@ public class ActivityGame extends Activity {
 			Log.i("REV", "Received Game Message on the server side");
 			if (!clientSockets.contains(s))
 				clientSockets.add(s);
+			switch (msg.getId()) {
+			case CONTAINS_BOARD_DATA:
+				Log.i("REV", "Server received BOARD DATA");
+				// determine next move
+				Reversi r = new Reversi(msg.getGameObjData());
+				Log.i("REV", "Player was " + r.getPlayerWhichHasToMove());
+				if (!r.setNextPlayer()) {
+					server.distributePacket(new ChatMessage(SERVER_STRING, "Game Over, player " + r.getWinner()
+							+ " has won (" + r.getPointsString() + ")"));
+					server.distributePacket(new ChatMessage(SERVER_STRING, "Please \"join\" again."));
+					server.distributePacket(new GameMessage(RESET_ID, new byte[1]));
+					synchronized (sentIDLOCK) {
+						sentID = 0;
+					}
+				}
+				Log.i("REV", "Next player is " + r.getPlayerWhichHasToMove());
+				// distribute new message
+				server.distributePacket(new GameMessage(CONTAINS_BOARD_DATA, r.getObjectData()));
+				break;
+			case CONTAINS_PLAYER_ID_REQUEST:
+				Log.i("REV", "Server received PLAYER ID REQUEST");
+				synchronized (sentIDLOCK) {
+					if (sentID != maxPlayers) {
+						sentID++;
+						byte[] god = new byte[1];
+						god[0] = sentID;
+						GameMessage m = new GameMessage(CONTAINS_PLAYER_ID, god);
+						Packet p = new Packet(PacketType.GAME_MESSAGE, m.getObjectData());
+						try {
+							s.sendPacket(p);
+						} catch (SocketException e) {
+							clientSockets.remove(s);
+							sentID--;
+						} catch (IOException e) {
+							// TODO:
+							e.printStackTrace();
+						}
 
+						if (sentID == maxPlayers) {
+							Log.i("REV", "MAX PLAYERS NEW GAME!");
+							r = new Reversi();
+							r.selectRandomPlayerForMove();
+							server.distributePacket(new ChatMessage(SERVER_STRING, "New Game hast Started"));
+							server.distributePacket(new GameMessage(CONTAINS_BOARD_DATA, r.getObjectData()));
+						}
+					}
+				}
+				break;
+			default:
+				Log.i("REV", "Server received game message with ID " + msg.getId());
+			}
 		}
 
 	};
 
-	private class UpdateChatUITask extends AsyncTask<ChatMessage, ChatMessage, Integer> {
-
-		@Override
-		protected Integer doInBackground(ChatMessage... params) {
-			// for (ChatMessage )
-			publishProgress(params);
-			return null;
-		}
-
-		protected void onProgressUpdate(ChatMessage... values) {
-			for (ChatMessage m : values) {
-
-			}
-		};
-	}
-
-	private class SwitchUITaskSetup extends AsyncTask<Integer, Integer, Integer> {
-
-		protected void onProgressUpdate(Integer... values) {
-			Log.i("REV", "CREATE SETUP UI 2/2");
-			createSetupUI();
-		}
-
-		@Override
-		protected Integer doInBackground(Integer... params) {
-			// for (ChatMessage )
-			Log.i("REV", "CREATE SETUP UI 1/2");
-			publishProgress(params);
-			return null;
-		}
-	}
+	private byte sentID = 0;
+	private int maxPlayers = 2;
 
 	private OnClickListener buttonSend = new OnClickListener() {
 
@@ -146,6 +214,19 @@ public class ActivityGame extends Activity {
 			if (etInput != null && !etInput.getText().toString().equals("")) {
 				String msg = etInput.getText().toString();
 				etInput.setText("");
+
+				if (msg.equals("join")) {
+					// TODO: send ID request
+					GameMessage m = new GameMessage(CONTAINS_PLAYER_ID_REQUEST, new byte[1]);
+					try {
+						client.sendGameMessage(m);
+					} catch (SocketException e) {
+						me.runOnUiThread(new ChatPoster(new ChatMessage("local", "Join failed")));
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
 
 				ChatMessage m = new ChatMessage(userName, msg);
 				if (client != null) {
@@ -333,7 +414,7 @@ public class ActivityGame extends Activity {
 		etPort = (EditText) findViewById(R.id.etPort);
 		etPort.setText("25667");
 		etName = (EditText) findViewById(R.id.etName);
-		cbSpectators = (CheckBox) findViewById(R.id.cbSpectators);
+		// cbSpectators = (CheckBox) findViewById(R.id.cbSpectators);
 
 	}
 
@@ -344,6 +425,8 @@ public class ActivityGame extends Activity {
 		btnSend.setOnClickListener(buttonSend);
 		etChat = (EditText) findViewById(R.id.etChat);
 		etInput = (EditText) findViewById(R.id.etInput);
+		boardPainter = (BoardPainter) findViewById(R.id.boardPainter1);
+		boardPainter.setSendGameReply(this);
 
 	}
 

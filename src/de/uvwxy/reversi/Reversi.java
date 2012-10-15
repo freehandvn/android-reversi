@@ -40,7 +40,7 @@ public class Reversi {
 	private int bScore5 = bScore4 + 2;
 	private int bScore6 = bScore5 + 2;
 	private int bScore7 = bScore6 + 2;
-	private int bPlayerMove = bScore7 + 1;
+	private int bPlayerMove = bScore7 + 2;
 
 	/**
 	 * Initially: Board size: [boardWidth,boardHeight,...]
@@ -54,7 +54,7 @@ public class Reversi {
 	 * Fifth: Which player has to move: [...,player0|player1,...]
 	 * 
 	 */
-	byte[] boardData;
+	private byte[] boardData;
 
 	public Reversi() {
 		newStandard2PBoard();
@@ -66,6 +66,13 @@ public class Reversi {
 
 	public Reversi(byte[] boardData) {
 		this.boardData = boardData;
+		vBoardWidth = getWidth();
+		vBoardHeight = getHeight();
+		setupBytePositions();
+	}
+
+	public byte[] getObjectData() {
+		return boardData;
 	}
 
 	private void setupBytePositions() {
@@ -86,9 +93,7 @@ public class Reversi {
 		bScore5 = bScore4 + 2;
 		bScore6 = bScore5 + 2;
 		bScore7 = bScore6 + 2;
-		bPlayerMove = bScore7 + 1;
-
-		boardData = new byte[bPlayerMove + 1];
+		bPlayerMove = bScore7 + 2;
 	}
 
 	private void setWidth(int w) {
@@ -160,6 +165,7 @@ public class Reversi {
 	}
 
 	/**
+	 * Get the number of points of this player on this board
 	 * 
 	 * @param player
 	 *            [1..8]
@@ -222,6 +228,7 @@ public class Reversi {
 		vBoardHeight = h;
 
 		setupBytePositions();
+		boardData = new byte[bPlayerMove + 1];
 
 		setWidth(w);
 		setHeight(h);
@@ -386,5 +393,54 @@ public class Reversi {
 		}
 
 		return sum;
+	}
+
+	/**
+	 * Flag the next player in this object.
+	 * 
+	 * @return true if there is a next player, false if the game is over
+	 */
+	public boolean setNextPlayer() {
+		byte nextPlayer = getPlayerWhichHasToMove();
+		byte origPlayer = nextPlayer;
+		Log.i("REV", "Choosing next player (from " + nextPlayer + ")");
+		do {
+			nextPlayer += 1;
+
+			if (nextPlayer > getNumPlayers())
+				nextPlayer = 1;
+			if (origPlayer == nextPlayer && !playerHasMove(nextPlayer))
+				return false;
+		} while (!playerHasMove(nextPlayer));
+		Log.i("REV", "Chose " + nextPlayer);
+		setPlayerWhichHasToMove(nextPlayer);
+		return true;
+	}
+
+	/**
+	 * Determine the winner of this match
+	 * 
+	 * @return the winner, -1 when something went wrong
+	 */
+	public byte getWinner() {
+		int points = Integer.MIN_VALUE;
+		byte player = -1;
+		for (byte i = 1; i <= getNumPlayers(); i++) {
+			if (points < getPlayerPoints(i))
+				player = i;
+		}
+		return player;
+	}
+
+	/**
+	 * Create the points string
+	 * 
+	 * @return the points string, format x:y:z:...
+	 */
+	public String getPointsString() {
+		String buf = "" + getPlayerPoints(1);
+		for (byte i = 2; i <= getNumPlayers(); i++)
+			buf += ":" + getPlayerPoints(i);
+		return buf;
 	}
 }
