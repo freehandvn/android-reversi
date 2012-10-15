@@ -5,6 +5,7 @@ import java.net.ConnectException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.LinkedList;
 
 import android.app.Activity;
 import android.content.Context;
@@ -17,6 +18,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
+import de.uvwxy.packsock.PackSock;
 import de.uvwxy.packsock.chat.ChatMessage;
 import de.uvwxy.packsock.chat.IChatMessageHook;
 import de.uvwxy.packsock.game.GameClient;
@@ -36,9 +38,14 @@ public class ActivityGame extends Activity {
 	private Button btnSend = null;
 	private EditText etChat = null;
 	private EditText etInput = null;
-	
+
 	GameClient client;
 	GameServer server;
+
+	private byte myPlayerID;
+	private final static byte CONTAINS_BOARD_DATA = 1;
+	private final static byte CONTAINS_PLAYER_ID_REQUEST = 2;
+	private final static byte CONTAINS_PLAYER_ID = 2;
 
 	private String userName;
 	private long userID = System.currentTimeMillis();
@@ -66,7 +73,7 @@ public class ActivityGame extends Activity {
 	private IChatMessageHook clientChatMessageReceived = new IChatMessageHook() {
 
 		@Override
-		public void onMessageReceived(ChatMessage msg) {
+		public void onMessageReceived(ChatMessage msg, PackSock s) {
 			if (etChat != null && msg != null) {
 				me.runOnUiThread(new ChatPoster(msg));
 			}
@@ -78,17 +85,24 @@ public class ActivityGame extends Activity {
 	private IGameMessageHook clientGameMessageReceived = new IGameMessageHook() {
 
 		@Override
-		public void onMessageReceived(GameMessage msg) {
+		public void onMessageReceived(GameMessage msg, PackSock s) {
 			Log.i("REV", "Received Game Message on the client side");
+			if (msg.getId() == CONTAINS_BOARD_DATA) {
+				
+			}
 		}
 
 	};
 
+	LinkedList<PackSock> clientSockets = new LinkedList<PackSock>();
 	private IGameMessageHook serverGameMessageReceived = new IGameMessageHook() {
 
 		@Override
-		public void onMessageReceived(GameMessage msg) {
+		public void onMessageReceived(GameMessage msg, PackSock s) {
 			Log.i("REV", "Received Game Message on the server side");
+			if (!clientSockets.contains(s))
+				clientSockets.add(s);
+
 		}
 
 	};
