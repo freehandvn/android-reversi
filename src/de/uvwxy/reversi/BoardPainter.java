@@ -29,6 +29,10 @@ public class BoardPainter extends PaintBox {
 	Bitmap red = null;
 	Bitmap blue = null;
 
+	Paint pRed = null;
+	Paint pBlue = null;
+	Paint pBlack = null;
+
 	int[][][] rectLookUpTable = new int[8][8][4];
 	// depends on size of the screen
 	double rectScale = 0;
@@ -108,6 +112,20 @@ public class BoardPainter extends PaintBox {
 		// canvas.drawBitmap(red, src[4][3], dst[4][3], p);
 
 		p.setColor(Color.BLACK);
+		if (myTurn) {
+			canvas.drawRect(0, 0, 16, 16, pBlack);
+			switch (sgr.getID()) {
+			case Reversi.iPlayer0:
+				canvas.drawRect(1, 1, 15, 15, pRed);
+				break;
+			case Reversi.iPlayer1:
+				canvas.drawRect(1, 1, 15, 15, pBlue);
+				break;
+			default:
+			}
+
+			canvas.drawText("It's your turn!", 20, 10, p);
+		}
 		canvas.drawText("width: " + getWidth() + " height: " + getHeight(), getWidth() / 2 - 50, getHeight() / 2 - 10,
 				p);
 	}
@@ -136,6 +154,18 @@ public class BoardPainter extends PaintBox {
 		empty = getScaledBitmap(bEmpty, w, w);
 		red = getScaledBitmap(bRed, w, w);
 		blue = getScaledBitmap(bBlue, w, w);
+
+		pRed = new Paint();
+		pBlue = new Paint();
+		pBlack = new Paint();
+
+		pRed.setColor(Color.RED);
+		pBlue.setColor(Color.BLUE);
+		pBlack.setColor(Color.BLACK);
+
+		pRed.setStyle(Style.FILL);
+		pBlue.setStyle(Style.FILL);
+		pBlack.setStyle(Style.FILL);
 
 		rctBGsrc = new Rect(0, 0, w, w);
 		rctBGdst = new Rect(offsetx, offsety, offsetx + w, offsety + w);
